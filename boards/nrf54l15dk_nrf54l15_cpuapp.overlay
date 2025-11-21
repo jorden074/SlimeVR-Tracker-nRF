@@ -1,40 +1,28 @@
 &pinctrl {
-	i2c0_default: i2c0_default {
+	spi22_default: spi22_default {
 		group1 {
-			psels = <NRF_PSEL(TWIM_SDA, 1, 5)>,
-				<NRF_PSEL(TWIM_SCL, 1, 7)>;
+			psels = <NRF_PSEL(SPIM_SCK, 1, 8)>,
+				<NRF_PSEL(SPIM_MOSI, 1, 9)>,
+				<NRF_PSEL(SPIM_MISO, 1, 10)>;
 		};
 	};
 
-	i2c0_sleep: i2c0_sleep {
+	spi22_sleep: spi22_sleep {
 		group1 {
-			psels = <NRF_PSEL(TWIM_SDA, 1, 5)>,
-				<NRF_PSEL(TWIM_SCL, 1, 7)>;
+			psels = <NRF_PSEL(SPIM_SCK, 1, 8)>,
+				<NRF_PSEL(SPIM_MOSI, 1, 9)>,
+				<NRF_PSEL(SPIM_MISO, 1, 10)>;
 			low-power-enable;
 		};
 	};
 
 };
 
-&pwm20_default {
-	group1 {
-		psels = <NRF_PSEL(PWM_OUT0, 1, 10)>,
-			<NRF_PSEL(PWM_OUT1, 1, 14)>;
-	};
-};
-
-&pwm20_sleep {
-	group1 {
-		psels = <NRF_PSEL(PWM_OUT0, 1, 10)>,
-			<NRF_PSEL(PWM_OUT1, 1, 14)>;
-	};
-};
-
 / {
-	pwmleds {
-		pwm_led0: pwm_led_0 {
-			pwms = <&pwm20 1 PWM_MSEC(20) PWM_POLARITY_NORMAL>;
-		};
+	// nRF54L15 has no USB - console/shell use RTT (configured in prj.conf)
+
+	aliases {
+		/delete-property/ pwm-led0;
 	};
 
 	battery-divider {
@@ -44,32 +32,68 @@
 		output-ohms = <1>;
 		full-ohms = <2>;
 	};
+
+	zephyr,user {
+		int0-gpios = <&gpio1 12 GPIO_ACTIVE_HIGH>;
+		// led-gpios not defined - P1.10 used by SPI MISO
+		// clk-gpios not defined - P1.13 conflicts with button0
+		// External clock for ICM-45686 is optional and not used on nRF54L15-DK
+	};
 };
 
+// Disable conflicting peripherals to free pins for SPI
+// P1.8 (button2), P1.9 (button1), P1.10 (led0) needed for SPI
+&button0 {
+	status = "disabled";
+};
+
+&button1 {
+	status = "disabled";
+};
+
+&button2 {
+	status = "disabled";
+};
+
+&led0 {
+	status = "disabled";
+};
+
+&led1 {
+	status = "disabled";
+};
+
+&pwm20 {
+	status = "disabled";
+};
+
+// I2C not used on nRF54L15-DK (IMU on SPI)
 &i2c20 {
-	compatible = "nordic,nrf-twim";
-	status = "okay";
-	zephyr,concat-buf-size = <1023>;
-	zephyr,flash-buf-max-size = <1023>;
-	clock-frequency = <I2C_BITRATE_FAST>;
-	pinctrl-0 = <&i2c0_default>;
-	pinctrl-1 = <&i2c0_sleep>;
-	pinctrl-names = "default", "sleep";
-
-	imu: imu@0 { // any address out of range (00, 7f, etc. will search all addresses and stored address first if available, specify an address here to search first otherwise
-		compatible = "i2c-device";
-		label = "imu";
-		reg = <0>;
-	};
-
-	mag: mag@0 {
-		compatible = "i2c-device";
-		label = "mag";
-		reg = <0>;
-	};
-
+	status = "disabled";
 };
 
+// UART20 disabled - using RTT console instead
 &uart20 {
 	status = "disabled";
 };
+
+// SPI configuration for ICM-45686 IMU using SPIM22 (WiFi shield connector)
+// Pin mapping: SCK=P1.8, MOSI=P1.9, MISO=P1.10, CS=P1.11, INT=P1.12, CLK=P1.13(unused)
+// Using P1.08-P1.14 range (recommended, not used by default DK peripherals)
+&spi22 {
+	compatible = "nordic,nrf-spim";
+	status = "okay";
+	cs-gpios = <&gpio1 11 GPIO_ACTIVE_LOW>;
+	pinctrl-0 = <&spi22_default>;
+	pinctrl-1 = <&spi22_sleep>;
+	pinctrl-names = "default", "sleep";
+
+	imu_spi: imu_spi@0 {
+		compatible = "vnd,spi-device";
+		reg = <0>;
+		spi-max-frequency = <DT_FREQ_M(24)>;
+		label = "imu-spi";
+	};
+};
+
+// nRF54L15 does not have USB hardware - console uses RTT instead

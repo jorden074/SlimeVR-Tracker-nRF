@@ -14,6 +14,13 @@
 
 #include "system.h"
 
+// GPREGRET compatibility: nRF54L has array, nRF52/53 has single register
+#if defined(CONFIG_SOC_SERIES_NRF54LX)
+	#define GPREGRET_SET(val) NRF_POWER->GPREGRET[0] = (val)
+#else
+	#define GPREGRET_SET(val) NRF_POWER->GPREGRET = (val)
+#endif
+
 static struct nvs_fs fs;
 
 #define NVS_PARTITION		storage_partition
@@ -464,7 +471,7 @@ void sys_reset_mode(uint8_t mode)
 	case 4: // Reset mode DFU
 		LOG_INF("DFU requested");
 #if ADAFRUIT_BOOTLOADER
-		NRF_POWER->GPREGRET = 0x57; // DFU_MAGIC_UF2_RESET
+		GPREGRET_SET(0x57); // DFU_MAGIC_UF2_RESET
 		sys_request_system_reboot(false);
 #endif
 #if NRF5_BOOTLOADER

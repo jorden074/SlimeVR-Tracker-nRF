@@ -26,6 +26,13 @@
 
 #include <ctype.h>
 
+// GPREGRET compatibility: nRF54L has array, nRF52/53 has single register
+#if defined(CONFIG_SOC_SERIES_NRF54LX)
+	#define GPREGRET_SET(val) NRF_POWER->GPREGRET[0] = (val)
+#else
+	#define GPREGRET_SET(val) NRF_POWER->GPREGRET = (val)
+#endif
+
 LOG_MODULE_REGISTER(console, LOG_LEVEL_INF);
 
 static void console_thread(void);
@@ -330,7 +337,7 @@ static void console_thread(void)
 	if (button_read()) // button held on usb connect, enter DFU
 	{
 #if ADAFRUIT_BOOTLOADER
-		NRF_POWER->GPREGRET = 0x57;
+		GPREGRET_SET(0x57);
 		sys_request_system_reboot(false);
 #endif
 #if NRF5_BOOTLOADER
@@ -491,7 +498,7 @@ static void console_thread(void)
 		else if (strcmp(argv[0], command_dfu) == 0)
 		{
 #if ADAFRUIT_BOOTLOADER
-			NRF_POWER->GPREGRET = 0x57;
+			GPREGRET_SET(0x57);
 			sys_request_system_reboot(false);
 #endif
 #if NRF5_BOOTLOADER

@@ -549,6 +549,20 @@ bool main_wfi = false;
 
 static void sensor_interrupt_handler(const struct device *dev, struct gpio_callback *cb, uint32_t pins)
 {
+	// Debug: Count interrupts
+	static uint32_t int_count = 0;
+	static int64_t last_log_time = 0;
+	int_count++;
+
+	// Log interrupt stats every 5 seconds
+	int64_t now = k_uptime_get();
+	if (now - last_log_time > 5000)
+	{
+		LOG_INF("FIFO interrupts in last 5s: %u (%.1f/sec)", int_count, (double)int_count / 5.0);
+		int_count = 0;
+		last_log_time = now;
+	}
+
 	// wake up sensor thread
 	if (main_wfi)
 	{

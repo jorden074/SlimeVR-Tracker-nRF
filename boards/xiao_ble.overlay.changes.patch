@@ -1,0 +1,88 @@
+diff --git a/boards/xiao_ble.overlay b/boards/xiao_ble.overlay
+old mode 100644
+new mode 100755
+index 586e8db..fab3a06
+--- a/boards/xiao_ble.overlay
++++ b/boards/xiao_ble.overlay
+@@ -28,6 +28,25 @@
+ 	};
+ };
+ 
++&pinctrl {
++	spi3_default: spi3_default {
++		group1 {
++			psels = <NRF_PSEL(SPIM_MISO, 1, 14)>,
++					<NRF_PSEL(SPIM_MOSI, 1, 15)>,
++					<NRF_PSEL(SPIM_SCK, 1, 13)>;
++		};
++	};
++
++	spi3_sleep: spi3_sleep {
++		group1 {
++			psels = <NRF_PSEL(SPIM_MISO, 1, 14)>,
++					<NRF_PSEL(SPIM_MOSI, 1, 15)>,
++					<NRF_PSEL(SPIM_SCK, 1, 13)>;
++			low-power-enable;
++		};
++	};
++};
++
+ / {
+ 	pwmleds {
+ 		pwm_led0: pwm_led_0 {
+@@ -44,13 +63,13 @@
+ 	buttons {
+ 		compatible = "gpio-keys";
+ 		button0: button_0 {
+-			gpios = <&gpio0 2 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
++			gpios = <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
+ 			label = "Push button switch 0";
+ 		};
+ 	};
+ 
+ 	aliases {
+-		// sw0 = &button0; // Uncomment to Enable SW0
++		sw0 = &button0; // Uncomment to Enable SW0
+ 		pwm-led1 = &pwm_led1;
+ 		pwm-led2 = &pwm_led2;
+ 	};
+@@ -65,9 +84,9 @@
+ 	};
+ 
+ 	zephyr,user {
+-		int0-gpios = <&gpio0 3 0>;
++		int0-gpios = <&gpio1 11 0>;
+ 		led-gpios = <&gpio0 17 (GPIO_OPEN_DRAIN|GPIO_ACTIVE_LOW)>;
+-		// clk-gpios = <&gpio0 28 GPIO_OPEN_DRAIN>; // Uncomment and set to correct pin if using an external clock (crystal oscillator)
++		clk-gpios = <&gpio0 5 GPIO_OPEN_DRAIN>; // Uncomment and set to correct pin if using an external clock (crystal oscillator)
+ 	};
+ 
+ };
+@@ -101,8 +120,8 @@
+ 	compatible = "nordic,nrf-spim";
+ 	status = "okay";
+ 	max-frequency = <DT_FREQ_M(24)>;
+-	pinctrl-0 = <&spi2_default>;
+-	pinctrl-1 = <&spi2_sleep>;
++	pinctrl-0 = <&spi3_default>;
++	pinctrl-1 = <&spi3_sleep>;
+ 	pinctrl-names = "default", "sleep";
+ 	cs-gpios = <&gpio1 12 GPIO_ACTIVE_LOW>;
+ 
+@@ -121,3 +140,16 @@
+ &nfct {
+ 	status = "disabled";
+ };
++
++&usbd {
++	cdc_acm_uart0: cdc_acm_uart0 {
++		compatible = "zephyr,cdc-acm-uart";
++	};
++};
++
++/ {
++	chosen {
++		zephyr,console = &cdc_acm_uart0;
++	};
++};
++

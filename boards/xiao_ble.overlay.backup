@@ -1,3 +1,15 @@
+&i2c1_default {
+	group1 {
+		bias-disable;
+	};
+};
+
+&i2c1_sleep {
+	group1 {
+		bias-disable;
+	};
+};
+
 &pwm0_default {
 	group1 {
 		psels = <NRF_PSEL(PWM_OUT0, 0, 26)>,
@@ -19,12 +31,9 @@
 &pinctrl {
 	spi3_default: spi3_default {
 		group1 {
-			psels = <NRF_PSEL(SPIM_SCK, 1, 13)>,   // P1.13 (D8)
-					<NRF_PSEL(SPIM_MOSI, 1, 15)>;  // P1.15 (D10)
-		};
-		group2 {
-			psels = <NRF_PSEL(SPIM_MISO, 1, 14)>;  // P1.14 (D9)
-			bias-pull-up;
+			psels = <NRF_PSEL(SPIM_MISO, 1, 14)>,
+					<NRF_PSEL(SPIM_MOSI, 1, 15)>,
+					<NRF_PSEL(SPIM_SCK, 1, 13)>;
 		};
 	};
 
@@ -54,13 +63,13 @@
 	buttons {
 		compatible = "gpio-keys";
 		button0: button_0 {
-			gpios = <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;  // SW_Push button
+			gpios = <&gpio0 4 (GPIO_PULL_UP | GPIO_ACTIVE_LOW)>;
 			label = "Push button switch 0";
 		};
 	};
 
 	aliases {
-		sw0 = &button0; // Enable SW0 for Marathon-1
+		sw0 = &button0; // Uncomment to Enable SW0
 		pwm-led1 = &pwm_led1;
 		pwm-led2 = &pwm_led2;
 	};
@@ -75,17 +84,34 @@
 	};
 
 	zephyr,user {
-		int0-gpios = <&gpio1 11 0>;  // INT1 on P1.11 (D4/A4)
+		int0-gpios = <&gpio1 11 0>;
 		led-gpios = <&gpio0 17 (GPIO_OPEN_DRAIN|GPIO_ACTIVE_LOW)>;
-		clk-gpios = <&gpio0 5 GPIO_OPEN_DRAIN>; // CLK_CTL for external IMU clock
+		clk-gpios = <&gpio0 5 GPIO_OPEN_DRAIN>; // Uncomment and set to correct pin if using an external clock (crystal oscillator)
 	};
 
 };
 
 /delete-node/ &uart0;
 
-// Marathon-1 uses SPI, not I2C - disable I2C1
-/delete-node/ &i2c1;
+&i2c1 {
+	compatible = "nordic,nrf-twim";
+	zephyr,concat-buf-size = <1023>;
+	zephyr,flash-buf-max-size = <1023>;
+	clock-frequency = <I2C_BITRATE_FAST>;
+
+	imu: imu@0 { // any address out of range (00, 7f, etc. will search all addresses and stored address first if available, specify an address here to search first otherwise
+		compatible = "i2c-device";
+		label = "imu";
+		reg = <0>;
+	};
+
+	mag: mag@0 {
+		compatible = "i2c-device";
+		label = "mag";
+		reg = <0>;
+	};
+
+};
 
 /delete-node/ &spi2;
 /delete-node/ &qspi;
@@ -97,7 +123,7 @@
 	pinctrl-0 = <&spi3_default>;
 	pinctrl-1 = <&spi3_sleep>;
 	pinctrl-names = "default", "sleep";
-	cs-gpios = <&gpio1 12 GPIO_ACTIVE_LOW>;  // P1.12 (D7) - CS pin
+	cs-gpios = <&gpio1 12 GPIO_ACTIVE_LOW>;
 
 	imu_spi: imu_spi@0 {
 		compatible = "vnd,spi-device";
@@ -115,4 +141,15 @@
 	status = "disabled";
 };
 
+&usbd {
+	cdc_acm_uart0: cdc_acm_uart0 {
+		compatible = "zephyr,cdc-acm-uart";
+	};
+};
+
+/ {
+	chosen {
+		zephyr,console = &cdc_acm_uart0;
+	};
+};
 
